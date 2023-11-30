@@ -30,4 +30,7 @@ def get_models(args):
         return UNet3DConditionModel.from_pretrained_2d(pretrained_model_path, subfolder="unet", use_concat=args.use_mask)
     else:
         raise '{} Model Not Supported!'.format(args.model)
-    
+
+
+def load_model(pretrained_model_path, use_mask):
+    return UNet3DConditionModel.from_pretrained_2d(pretrained_model_path, subfolder="unet", use_concat=use_mask)

@@ -1,0 +1,42 @@
+# Configuration for Cog ⚙️
+# Reference: https://github.com/replicate/cog/blob/main/docs/yaml.md
+
+build:
+  # set to true if your model requires a GPU
+  gpu: true
+
+  # a list of ubuntu apt packages to install
+  system_packages:
+    - "libgl1-mesa-glx"
+    - "libglib2.0-0"
+
+  # python version in the form '3.11' or '3.11.4'
+  python_version: "3.11"
+
+  # a list of packages in the format <package-name>==<version>
+  python_packages:
+    - "torch==2.0.1"
+    - "torchaudio==2.0.2"
+    - "torchvision==0.15.2"
+    - "decord==0.6.0"
+    - "diffusers==0.15.0"
+    - "imageio==2.29.0"
+    - "transformers==4.29.2"
+    - "xformers==0.0.20"
+    - "einops"
+    - "omegaconf"
+    - "tensorboard==2.15.1"
+    - "timm==0.9.10"
+    - "rotary-embedding-torch==0.3.5"
+    - "natsort==8.4.0"
+    - "ipython"
+    - "accelerate"
+    - "av==11.0.0"
+
+  # commands run after the environment is setup
+  # run:
+  #   - "echo env is ready!"
+  #   - "echo another command if needed"
+
+# predict.py defines how predictions are run on your model
+predict: "predict.py:ImageToVideoPredictor"
