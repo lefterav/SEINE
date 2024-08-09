@@ -66,3 +66,6 @@
 2024-08-10.02-17-31 git add . 
 2024-08-10.02-18-02 git commit -m "Restructured SEINE code to be class-based and self-dependent"
 2024-08-10.02-18-12 git push
+2024-08-10.02-26-00 git add . 
+2024-08-10.02-26-11 git commit -m "Fixes in configuration"
+2024-08-10.02-26-15 git push

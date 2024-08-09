@@ -424,8 +424,14 @@ def transition(config_base, config_inference, config_iterations):
         input_file_pairs = [(images[i], images[i+1]) for i in range(len(images) - 1)]
 
     for file1, file2 in tqdm(input_file_pairs):
+        # Check if the directory exists
+        output_dir = iteration_config.output_dir
+        if not os.path.exists(output_dir):
+            # Create the directory
+            os.makedirs(output_dir)
+
         # create the output filename by joining the ids with a hyphen
-        output_filename = os.path.join(iteration_config.output_dir, f"{file1.file_id}-{file2.file_id}.mp4")
+        output_filename = os.path.join(output_dir, f"{file1.file_id}-{file2.file_id}.mp4")
         prompt = config_iterations.prompt.format(file1=file1, file2=file2)
         print(prompt)
 
