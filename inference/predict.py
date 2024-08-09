@@ -6,6 +6,8 @@ import sys
 import tempfile
 from operator import attrgetter
 
+from tqdm import tqdm
+
 try:
     import utils
     from diffusion import create_diffusion
@@ -68,10 +70,10 @@ def get_input(
                 first_frame_path = os.path.join(input_path, natsorted(file_list)[0])
                 last_frame_path = os.path.join(input_path, natsorted(file_list)[-1])
                 first_frame = torch.as_tensor(
-                    np.array(Image.open(first_frame_path), dtype=np.uint8, copy=True)
+                    np.array(TransitionImage.open(first_frame_path), dtype=np.uint8, copy=True)
                 ).unsqueeze(0)
                 last_frame = torch.as_tensor(
-                    np.array(Image.open(last_frame_path), dtype=np.uint8, copy=True)
+                    np.array(TransitionImage.open(last_frame_path), dtype=np.uint8, copy=True)
                 ).unsqueeze(0)
                 for i in range(num):
                     video_frames.append(first_frame)
@@ -95,7 +97,7 @@ def get_input(
                         extention.lower().strip() == ext for ext in IMAGE_EXTENSIONS
                     ):
                         image = torch.as_tensor(
-                            np.array(Image.open(file), dtype=np.uint8, copy=True)
+                            np.array(TransitionImage.open(file), dtype=np.uint8, copy=True)
                         ).unsqueeze(0)
                         video_frames.append(image)
                     else:
@@ -115,7 +117,7 @@ def get_input(
                 video_frames = []
                 num = int(mask_type.split("first")[-1])
                 first_frame = torch.as_tensor(
-                    np.array(Image.open(input_path), dtype=np.uint8, copy=True)
+                    np.array(TransitionImage.open(input_path), dtype=np.uint8, copy=True)
                 ).unsqueeze(0)
                 for i in range(num):
                     video_frames.append(first_frame)
@@ -238,7 +240,7 @@ def auto_inpainting(
     return video_clip
 
 
-class Image:
+class TransitionImage:
     def __init__(self,
                  filename):
         self.filename = filename
@@ -260,7 +262,7 @@ class Image:
 
 
 class ImageToVideoPredictor:
-    def setup(self, config="../configs/transition_base.yaml") -> None:
+    def __init__(self, config="../configs/transition_base.yaml") -> None:
         """Load the model into memory to make running multiple predictions efficient"""
 
         args = OmegaConf.load(config)
@@ -272,7 +274,8 @@ class ImageToVideoPredictor:
 
         print("Loading model...")
         model_conf = dict(
-            pretrained_model_path=args.pretrained_model_path, use_mask=args.use_mask
+            pretrained_model_path=args.pretrained_model_path,
+            use_mask=args.use_mask
         )
         model = load_model(**model_conf).to(device)
         if args.enable_xformers_memory_efficient_attention:
@@ -405,12 +408,11 @@ class ImageToVideoPredictor:
 
 def transition(config_base, config_inference, config_iterations):
 
-    predictor = ImageToVideoPredictor()
-    predictor.setup(config_base)
+    predictor = ImageToVideoPredictor(config_base)
     iteration_config = OmegaConf.load(config_iterations)
 
     # get the list of filenames of the given directory and initialize the image instances
-    images = [Image(f) for f in os.listdir(iteration_config.input_directory) if os.path.isfile(f)]
+    images = [TransitionImage(f) for f in os.listdir(iteration_config.input_directory) if os.path.isfile(f)]
 
     # sort the images based on their file_id and then by their description
     images = sorted(images, key=attrgetter("file_id", "description"))
@@ -421,16 +423,16 @@ def transition(config_base, config_inference, config_iterations):
         # create pairs (1,2), (2,3)
         input_file_pairs = [(images[i], images[i+1]) for i in range(len(images) - 1)]
 
-    for file1, file2 in input_file_pairs:
+    for file1, file2 in tqdm(input_file_pairs):
         # create the output filename by joining the ids with a hyphen
         output_filename = os.path.join(iteration_config.output_dir, f"{file1.file_id}-{file2.file_id}.mp4")
-        prompt = f"{file1.description}, camera zoom in. {file2.description}, camera zoom out. "
+        prompt = config_iterations.prompt.format(file1=file1, file2=file2)
+        print(prompt)
 
         predictor.predict(config=config_inference,
                           file_list=[file1, file2],
                           output_filename=output_filename,
                           prompt=prompt,
-
                           )
 
 
