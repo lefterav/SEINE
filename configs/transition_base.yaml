@@ -1,0 +1,12 @@
+#path config:
+ckpt: "pretrained/seine.pt"
+pretrained_model_path: "pretrained/stable-diffusion-v1-4/"
+
+# model config:
+model: UNet
+# model speedup
+use_fp16: True
+enable_xformers_memory_efficient_attention: True
+do_classifier_free_guidance: True
+mask_type: "onelast1"
+use_mask: True
