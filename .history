@@ -69,3 +69,8 @@
 2024-08-10.02-26-00 git add . 
 2024-08-10.02-26-11 git commit -m "Fixes in configuration"
 2024-08-10.02-26-15 git push
+2024-08-10.02-27-57 git add . 
+2024-08-10.02-28-10 git commit -m "Create output dir if it doesn't exist"
+2024-08-10.02-28-15 git push
+2024-08-10.02-46-36 git add . 
+2024-08-10.02-48-49 git add . 

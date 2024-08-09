@@ -5,6 +5,7 @@ import os
 import sys
 import tempfile
 from operator import attrgetter
+from pathlib import Path, PurePath
 
 from tqdm import tqdm
 
@@ -426,6 +427,7 @@ def transition(config_base, config_inference, config_iterations):
     for file1, file2 in tqdm(input_file_pairs):
         # Check if the directory exists
         output_dir = iteration_config.output_dir
+
         if not os.path.exists(output_dir):
             # Create the directory
             os.makedirs(output_dir)
@@ -458,6 +460,15 @@ if __name__ == '__main__':
                         type=str,
                         default="configs/transition_iterations.yaml")
     args = parser.parse_args()
+
+    if not os.path.isabs(args.base_config):
+        args.base_config = PurePath(__file__).parent.parent.joinpath(args.base_config)
+
+    if not os.path.isabs(args.inference_config):
+        args.inference_config = PurePath(__file__).parent.parent.joinpath(args.inference_config)
+
+    if not os.path.isabs(args.iteration_config):
+        args.inference_config = PurePath(__file__).parent.parent.joinpath(args.iteration_config)
 
     transition(args.base_config, args.inference_config, args.iteration_config)
         
