@@ -253,7 +253,7 @@ class TransitionImage:
 
         # create a class variable for the id and one for the textual description
         try:
-            self.file_id = filename_parts[0]
+            self.file_id = int(filename_parts[0])
         except KeyError:
             self.file_id = 0
 
