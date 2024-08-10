@@ -68,13 +68,13 @@ def get_input(
             if mask_type.startswith("onelast"):
                 num = int(mask_type.split("onelast")[-1])
                 # get first and last frame
-                first_frame_path = os.path.join(input_path, natsorted(file_list)[0])
-                last_frame_path = os.path.join(input_path, natsorted(file_list)[-1])
+                first_frame_path = natsorted(file_list)[0]
+                last_frame_path = natsorted(file_list)[-1]
                 first_frame = torch.as_tensor(
-                    np.array(TransitionImage.open(first_frame_path), dtype=np.uint8, copy=True)
+                    np.array(Image.open(first_frame_path), dtype=np.uint8, copy=True)
                 ).unsqueeze(0)
                 last_frame = torch.as_tensor(
-                    np.array(TransitionImage.open(last_frame_path), dtype=np.uint8, copy=True)
+                    np.array(Image.open(last_frame_path), dtype=np.uint8, copy=True)
                 ).unsqueeze(0)
                 for i in range(num):
                     video_frames.append(first_frame)
@@ -98,7 +98,7 @@ def get_input(
                         extention.lower().strip() == ext for ext in IMAGE_EXTENSIONS
                     ):
                         image = torch.as_tensor(
-                            np.array(TransitionImage.open(file), dtype=np.uint8, copy=True)
+                            np.array(Image.open(file), dtype=np.uint8, copy=True)
                         ).unsqueeze(0)
                         video_frames.append(image)
                     else:
@@ -118,7 +118,7 @@ def get_input(
                 video_frames = []
                 num = int(mask_type.split("first")[-1])
                 first_frame = torch.as_tensor(
-                    np.array(TransitionImage.open(input_path), dtype=np.uint8, copy=True)
+                    np.array(Image.open(input_path), dtype=np.uint8, copy=True)
                 ).unsqueeze(0)
                 for i in range(num):
                     video_frames.append(first_frame)
@@ -243,8 +243,9 @@ def auto_inpainting(
 
 class TransitionImage:
     def __init__(self,
-                 filename):
-        self.filename = filename
+                 filename,
+                 path):
+        self.filename = os.path.join(path, filename)
 
         # this is based on the assumption that every filename contains a numerical id
         # followed by as space, followed by a description of the picture
@@ -257,7 +258,7 @@ class TransitionImage:
             self.file_id = 0
 
         try:
-            self.description = " ".join(filename_parts[1:])
+            self.description = " ".join(filename_parts[1:]).replace(".jpg", "")
         except KeyError:
             self.description = filename
 
@@ -265,7 +266,7 @@ class TransitionImage:
 class ImageToVideoPredictor:
     def __init__(self, config="../configs/transition_base.yaml") -> None:
         """Load the model into memory to make running multiple predictions efficient"""
-
+        print(f"loading config: {config}")
         args = OmegaConf.load(config)
         self.args = args
 
@@ -329,6 +330,7 @@ class ImageToVideoPredictor:
         # output = self.model(processed_image, scale)
         # return postprocess(output)
         args = OmegaConf.load(config)
+        print(args)
         height = args.height
         width = args.width
         seed = args.seed
@@ -402,6 +404,7 @@ class ImageToVideoPredictor:
             # save_video_path = "/tmp/output.mp4"
             # save_video_path = os.path.join(tempfile.mkdtemp(), output_filename)
             # torchvision.io.write_video(save_video_path, video_, fps=8)
+            print("Generation finished. Saving video...")
             torchvision.io.write_video(output_filename, video_, args.fps)
 
             return output_filename
@@ -413,20 +416,24 @@ def transition(config_base, config_inference, config_iterations):
     iteration_config = OmegaConf.load(config_iterations)
 
     # get the list of filenames of the given directory and initialize the image instances
-    images = [TransitionImage(f) for f in os.listdir(iteration_config.input_directory) if os.path.isfile(f)]
+    input_dir = iteration_config.input_directory
+    images = [TransitionImage(f, input_dir) for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
 
     # sort the images based on their file_id and then by their description
     images = sorted(images, key=attrgetter("file_id", "description"))
 
     input_file_pairs = []
+    print(images, iteration_config)
 
     if iteration_config.iteration_mode == "sequential_pairwise":
         # create pairs (1,2), (2,3)
         input_file_pairs = [(images[i], images[i+1]) for i in range(len(images) - 1)]
+    
+    print(f"Input file pairs: {input_file_pairs}")
 
     for file1, file2 in tqdm(input_file_pairs):
         # Check if the directory exists
-        output_dir = iteration_config.output_dir
+        output_dir = iteration_config.output_directory
 
         if not os.path.exists(output_dir):
             # Create the directory
@@ -434,11 +441,11 @@ def transition(config_base, config_inference, config_iterations):
 
         # create the output filename by joining the ids with a hyphen
         output_filename = os.path.join(output_dir, f"{file1.file_id}-{file2.file_id}.mp4")
-        prompt = config_iterations.prompt.format(file1=file1, file2=file2)
+        prompt = iteration_config.prompt.format(file1=file1, file2=file2)
         print(prompt)
 
         predictor.predict(config=config_inference,
-                          file_list=[file1, file2],
+                          file_list=[file1.filename, file2.filename],
                           output_filename=output_filename,
                           prompt=prompt,
                           )
@@ -462,13 +469,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not os.path.isabs(args.base_config):
-        args.base_config = PurePath(__file__).parent.parent.joinpath(args.base_config)
+        args.base_config = Path(__file__).parent.parent.joinpath(args.base_config)
 
     if not os.path.isabs(args.inference_config):
-        args.inference_config = PurePath(__file__).parent.parent.joinpath(args.inference_config)
+        args.inference_config = Path(__file__).parent.parent.joinpath(args.inference_config)
 
     if not os.path.isabs(args.iteration_config):
-        args.inference_config = PurePath(__file__).parent.parent.joinpath(args.iteration_config)
+        args.iteration_config = Path(__file__).parent.parent.joinpath(args.iteration_config)
 
     transition(args.base_config, args.inference_config, args.iteration_config)
         
