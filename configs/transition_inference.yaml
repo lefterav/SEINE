@@ -6,7 +6,7 @@ run_time: 13
 guidance_scale: 8.0
 sample_method: 'ddpm'
 num_sampling_steps: 250
-fps: 8
+fps: 4
 #text_prompt: ['first object on the left , camera zoom-in']
 #additional_prompt: "first object on the right , camera zoom-out"
 #negative_prompt: ""
