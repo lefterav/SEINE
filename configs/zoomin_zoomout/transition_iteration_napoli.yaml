@@ -1,0 +1,5 @@
+iteration_mode: sequential_pairwise
+#iteration_mode: exponential_pairwise
+input_directory: /netscratch/avramidis/experiments/transition/restructured/input/napoli
+output_directory: /netscratch/avramidis/experiments/transition/restructured/output/napoli
+prompt: "{file1.description}, camera zoom in. {file2.description}, camera zoom out."
